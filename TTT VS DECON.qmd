@@ -1,0 +1,86 @@
+---
+title: "TTT VS DECON"
+format: pdf
+editor: visual
+---
+
+```{r,echo=FALSE,results = "FALSE"}
+library("fdrtool")
+library(VGAM)
+library("decon")
+library(tidyverse)
+n=10000
+x <- rexp(n,1)
+sig=0.1
+u=ifelse(runif(n) > 0.5, 1, -1) * rexp(n, rate = 1/sig)
+w <- x+u
+# estimate the bandwidth with the bootstrap method with re-sampling
+bw <- bw.dnrd(w,sig=sig, error="laplacian")
+Fn <- DeconCdf(w,sig,error='laplacian',bw=bw)
+
+```
+
+```{r,echo=FALSE,fig.cap="Distribution Vs Decon"}
+Fn$x=ifelse(Fn$x<0,0,Fn$x)
+M=tibble(
+  x= Fn$x,
+  y = Fn$y, 
+  z=pexp(x,1)
+)
+ggplot(M, aes(x = x)) +
+  geom_line(aes(y = y), color = "red")+
+  geom_line(aes(y = z), color = "black")
+
+```
+
+```{r,echo=FALSE, fig.cap="Quantile Vs Decon"}
+# Calculate and plot the quantile 
+Qn=Fn
+Qn$x=Fn$y
+Qn$y=Fn$x
+M=tibble(
+  x= Qn$x,
+  y = Qn$y, 
+  z=qexp(x,1)
+)
+ggplot(M, aes(x = x)) +
+geom_line(aes(y = y), color = "red")+
+geom_line(aes(y = z), color = "black")
+
+```
+
+```{r,echo=FALSE,fig.cap="Survival function VS Decon"}
+# Create and plot the survival function
+Surv=splinefun(Fn$x, 1-Fn$y)
+M=tibble(
+  x= Fn$x,
+  y = Surv(x), 
+  z=1-pexp(x,1)
+)
+ggplot(M, aes(x = x)) +
+  geom_line(aes(y = y), color = "red")+
+  geom_line(aes(y = z), color = "black")
+
+```
+
+```{r,echo=FALSE,fig.cap = "TTT VS DEco"}
+
+# Create the TTT
+TTT <- function(x) {
+  d <- sapply(x, function(x) {
+    integrate(Surv, lower = 0, x)$value
+  }) 
+  d
+}
+
+# Create the data
+M=tibble(
+  x = Qn$x, 
+  y= TTT(Qn$y),
+  z=x
+)
+# Plote the data
+ggplot(M, aes(x = x)) +
+  geom_line(aes(y = y), color = "red")+
+  geom_line(aes(y = z), color = "black")
+```
