@@ -10,24 +10,33 @@ dens1 <- function(x)
 }
 
 dens2 <- function(x) {
-  0.0*dbeta(x,1,1)+0.2*dexp(x,1.5)+0.1*dlnorm(x,15,2.2)+0.7*dweibull(x,1,1)
+  0.7*dbeta(x,0.5,0.5)+0.3*dweibull(x,2.5,0.75)
 }
 
-cdf <- function(t) {
-    integrate(dens2, 0, t)$value
+cdf <- function(x) {
+  0.5*pbeta(x,0.5,0.5)+0.5*pweibull(x,1.5,1)
 }
 
-conv <- convolve(dens1, dens2)
-
-t1=seq(0.1,10,1)
-Hazard_values1=-log(1-sapply(t1,cdf))
-plot(t1,Hazard_values1,type="line")
 
 
-t2=seq(-5,5,0.1)
-Hazard_values2=-log(1-cumsum(conv$density(t2))/sum(conv$density(t2)))
-plot(t2,Hazard_values2, type="line")
-lines(t1,Hazard_values1,type="line",col=2)
+convolve_cdf <- function(t_values) {
+  sapply(t_values, function(t) {
+    integrand <- function(x) {
+      cdf(x) * dens1(t - x)
+    }
+    integrate(integrand, -Inf, Inf)$value
+  })
+}
 
-#b=sqrt(var(0.4*dexp(t,1)+0.6*dbeta(t,1,1)))*0.4/sqrt(2)
-#Hazard_values=-log(1-conv$cdf(t))
+#conv <- convolve(dens1, dens2)
+
+t1=seq(0.1,4,0.01)
+#convolve_cdf(t1)
+
+#plot(t1,cdf(t1),type="line")
+#lines(t1,convolve_cdf(t1),type = "line",col=2)
+
+Hazard_values1=-log(1-cdf(t1))
+Hazard_values2=-log(1-convolve_cdf(t1))
+plot(t1,Hazard_values1,type="line",col=1)
+lines(t1,Hazard_values2,type="line",col=2)
